@@ -278,6 +278,8 @@ def sistema():
         elif opção == 0:
             print('Saindo do sistema ...')
             break
+        else:
+            print('====== Opção Inválida ======')
 
 
 sistema()
