@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod, abstractproperty
 from datetime import datetime, date
+from textwrap import dedent
 
 class Transação(ABC):
     @property
@@ -91,22 +92,21 @@ class Conta:
     
     def sacar(self, valor:float):
         if valor > self._saldo:
-            print('\nSaque falhou!\n')
+            print('\nSaque falhou! Tente Novamente\n')
             return False
         elif valor > 0:
             self._saldo -= valor
-            print('\nSaque concluído!\n')
+            print('\n====== Saque concluído! ======\n')
             return True
     
     def depositar(self, valor:float):
         if valor > 0:
             self._saldo += valor
-            print('\nDepósito concluído!\n')
+            print('\n====== Depósito concluído! ======\n')
             return True
         else:
-            print('\nDepósito falhou!\n')
+            print('\nDepósito falhou! Tente Novamente\n')
             return False
-
 
 class ContaCorrente(Conta):
     def __init__(self, numero:int, agencia:str, cliente, limite:float, limite_saques:int):
@@ -124,6 +124,9 @@ class ContaCorrente(Conta):
             return super().sacar(valor)
         
         return False
+    
+    def __str__(self):
+        pass
 
 class Cliente:
     def __init__(self, endereço:str):
@@ -143,17 +146,138 @@ class PessoaFisica(Cliente):
         self._nome = nome
         self._data_nascimento = data_nascimento
 
-#Exemplo
+def menu():
+    menu = """\
+    ================ MENU ================
+    [1]\tDepositar
+    [2]\tSacar
+    [3]\tExtrato
+    [4]\tNova conta
+    [5]\tListar contas
+    [6]\tNovo usuário
+    [0]\tSair
+    => """
+    return int(input(dedent(menu)))
 
-cliente = PessoaFisica(nome = 'Jonas', cpf = '11345235674', data_nascimento = date(2007,11,27), endereço = 'Rua A n°1437, Brooklyn')
 
-conta = ContaCorrente(cliente = cliente, numero = 1, agencia = '3658', limite = 30000, limite_saques = 30)
-cliente.adicionar_conta(conta)
+def filtrar_clientes(cpf, clientes):
+    clientes_filtrados = [cliente for cliente in clientes if cliente.cpf == cpf]
+    return clientes_filtrados[0] if clientes_filtrados else None
 
-cliente.realizar_transação(conta = conta, transação = Deposito(50000.0))
-print(conta.saldo)
+def recuperar_cliente(cliente):
+    if not cliente.contas:
+        print('====== Cliente sem contas! ======')
+        return
+    return cliente.contas[0]
 
-cliente.realizar_transação(conta = conta, transação = Saque(1000.0))
-print(conta.saldo)
+def depositar(clientes):
+    cpf = input('Informe seu CPF: ')
+    cliente = filtrar_clientes(cpf, clientes)
 
-conta.historico.extrato()
+    if not cliente:
+        print('====== Cliente não encontrado ======')
+        return
+    
+    valor = float(input('Valor do depósito: '))
+    transação = Deposito(valor)
+
+    conta = recuperar_cliente(cliente)
+    cliente.realizar_transação(conta = conta, transação = transação)
+
+
+def sacar(clientes):
+    cpf = input('Informe seu CPF: ')
+    cliente = filtrar_clientes(cpf, clientes)
+
+    if not cliente:
+        print('====== Cliente não encontrado ======')
+        return
+    
+    valor = float(input('Valor do Saque: '))
+    transação = Saque(valor)
+
+    conta = recuperar_cliente(cliente)
+    cliente.realizar_transação(conta = conta, transação = transação)
+
+def exibir_extrato(clientes):
+    cpf = input("Informe o CPF do cliente: ")
+    cliente = filtrar_clientes(cpf, clientes)
+
+    if not cliente:
+        print("====== Cliente não encontrado! ======")
+        return
+
+    conta = recuperar_cliente(cliente)
+    if not conta:
+        return
+    
+    conta.historico.extrato()
+
+def nova_conta(numero_conta, clientes, contas):
+    cpf = input('Informe o CPF do cliente: ')
+    cliente = filtrar_clientes(cpf, clientes )
+
+    if not cliente:
+        print('====== Cliente não encontrado, fluxo de criação de conta encerrado! ======')
+        return
+
+    agencia = input('Informe sua agência: ')
+    limite = float(input('Informe seu limite: '))
+    limite_saques = int(input('Informe seu limite de saques: '))
+
+    conta = ContaCorrente(cliente = cliente, numero = numero_conta, agencia = agencia, limite = limite, limite_saques = limite_saques)
+
+    contas.append(conta)
+    cliente._contas.append(conta)
+
+    print('Conta criada com sucesso!')
+
+def listar_contas(contas):
+    for conta in contas:
+        print(100*'=')
+        print(dedent(str(conta)))
+
+
+def novo_usuario(clientes):
+    cpf = input('Informe o CPF do cliente: ')
+    cliente = filtrar_clientes(cpf, clientes )
+
+    if cliente:
+        print('====== Esse cliente já existe" ======')
+        return
+    
+    nome = input('Informe seu nome: ')
+    data_nascimento = input('Informe sua data de nascimento (dd-mm-aaaa)')
+    endereço = input('Informe seu endereço: ')
+    cliente = PessoaFisica(nome = nome, cpf = cpf, data_nascimento = data_nascimento, endereço = endereço)
+
+    clientes.append(cliente)
+
+    print('Cliente criado com sucesso!')
+
+def sistema():
+    contas = []
+    clientes = []
+    
+    while True:
+        opção = menu()
+
+        if opção == 1:
+            depositar(clientes)
+        elif opção == 2:
+            sacar(clientes)
+        elif opção == 3:
+            exibir_extrato(clientes)
+        elif opção == 4:
+            numero_conta = len(contas) + 1
+            nova_conta(numero_conta, clientes, contas)
+        elif opção == 5:
+            listar_contas(contas)
+        elif opção == 6:
+            novo_usuario(clientes)
+        elif opção == 0:
+            print('Saindo do sistema ...')
+            break
+
+
+sistema()
